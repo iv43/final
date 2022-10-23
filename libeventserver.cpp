@@ -41,17 +41,18 @@ static void read_cb(struct bufferevent*bev, void *ctx){
 		//printf("file name:!%s!\n", file_name.c_str());
 			FILE* file = fopen(file_name.c_str(), "r");	
 			if(file != NULL){
-				evbuffer_add(output, "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n", 42);
+				evbuffer_add(output, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n", 42);
 				evbuffer_add_file(output, fileno(file), 0, -1);
 sleep(5);
+				evbuffer_add(output, "\n\n",4);
 				fclose(file);
 			}else{
-				evbuffer_add(output, "HTTP/1.0 404 file not found\r\n",28);
+				evbuffer_add(output, "HTTP/1.0 404 file not found\n\n",28);
 				
 			}
 	}
 	else{
-		evbuffer_add(output, "HTTP/1.0 404 bad request\r\n", 25);
+		evbuffer_add(output, "HTTP/1.0 404 bad request\n\n", 25);
 	}
 		
 
@@ -133,7 +134,7 @@ sockaddr.sin_port = htons(port);
 
 unsigned addr=0;
 inet_pton(AF_INET, ip, &addr);//адрес в число
-sockaddr.sin_addr.s_addr = htonl(addr);//htonl меняет порядок следования байт
+sockaddr.sin_addr.s_addr =/* htonl(*/addr;//htonl меняет порядок следования байт
 //bind(masterSocket, (struct sockaddr*)(&sockaddr), sizeof(sockaddr) );//не надо, libevent сам делает
 
 
