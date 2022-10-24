@@ -5,6 +5,8 @@
 #include<sys/types.h>
 #include<sys/socket.h>
 #include<sys/un.h>
+#include<sys/stat.h>
+#include<fcntl.h>
 #include<string>
 #include<stdlib.h>
 #include<stdio.h>
@@ -27,35 +29,51 @@ static void read_cb(struct bufferevent*bev, void *ctx){
 	//evbuffer_copyout(input, data, len);//прочитать не удаляя из input
 	evbuffer_remove(input, data, len);//прочитать и удалить из input
 	std::string response(data);
-	//char* end_data = &data[len];
-	//printf("data: %s\n", data);
+	char* end_data = &data[len];
+	//printf("data: !!!%s!!!\n", data);
 
  	int start = response.find("GET");
 	
+const char* BAD="HTTP/1.0 404 NOT FOUND\r\nContent-length: 0\r\nContent-Type: text/html\r\n\r\n";
+	
 	if(start == 0){
 		int version = response.find("HTTP/");
-	
-		std::string file_name = response.substr(4, version-5);
+		std::string file_name = response.substr(5, version-6);
 		
+		int param = file_name.find("?");
+		if(param != -1){
+		file_name=file_name.substr(0, param);
+	
+		}	
 		file_name = directory+file_name;	
-		//printf("file name:!%s!\n", file_name.c_str());
+//		printf("file name:!%s!\n", file_name.c_str());
 			FILE* file = fopen(file_name.c_str(), "r");	
 			if(file != NULL){
-				evbuffer_add(output, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n", 42);
+				int file_size=0;
+				struct stat fileStat;
+				fstat(fileno(file), &fileStat);
+				file_size=fileStat.st_size;
+char file_size_char[21]{};
+sprintf(file_size_char, "%d",file_size);
+const char* OK="HTTP/1.0 200 OK\r\nContent-length: ";
+				evbuffer_add(output, OK,strlen(OK));
+				evbuffer_add(output, file_size_char, strlen(file_size_char));
+const char* OKend="\r\nContent-Type: text/html\r\n\r\n";
+				evbuffer_add(output, OKend, strlen(OKend));
 				evbuffer_add_file(output, fileno(file), 0, -1);
-sleep(5);
-				evbuffer_add(output, "\n\n",4);
+const char* end="\r\n\r\n";
+				evbuffer_add(output, end, strlen(end));
+sleep(1);
 				fclose(file);
 			}else{
-				evbuffer_add(output, "HTTP/1.0 404 file not found\n\n",28);
-				
+				evbuffer_add(output, BAD,strlen(BAD));
 			}
+			
 	}
 	else{
-		evbuffer_add(output, "HTTP/1.0 404 bad request\n\n", 25);
+				evbuffer_add(output, BAD,strlen(BAD));
+				
 	}
-		
-
 	free(data);
 }
 static void work_with_client_cb(struct bufferevent*bev, void *ctx){
@@ -105,6 +123,12 @@ static void accept_error_cb(struct evconnlistener *listner,	void*ctx){
 int main(int argc, char* argv[]){
 daemon(1,1);
 
+int fd = open("logs", O_WRONLY|O_CREAT|O_APPEND, 0664);
+dup2(fd, STDOUT_FILENO);
+dup2(fd, STDERR_FILENO);
+close(STDIN_FILENO);
+
+
 const char* opts="h:p:d:";
 int a=0;
 char*ip;
@@ -151,9 +175,6 @@ sockaddr.sin_addr.s_addr =/* htonl(*/addr;//htonl меняет порядок с
 	evconnlistener_set_error_cb(listner, accept_error_cb);
 //event_base_loop с флагом 0 - запуск цикла
 	event_base_dispatch(base);
-
-
-
 
 	return 0;
 }
