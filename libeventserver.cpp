@@ -121,7 +121,7 @@ static void accept_error_cb(struct evconnlistener *listner,	void*ctx){
 }
 
 int main(int argc, char* argv[]){
-daemon(1,1);
+daemon(0,0);
 
 int fd = open("logs", O_WRONLY|O_CREAT|O_APPEND, 0664);
 dup2(fd, STDOUT_FILENO);
