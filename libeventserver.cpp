@@ -30,7 +30,7 @@ static void read_cb(struct bufferevent*bev, void *ctx){
 	evbuffer_remove(input, data, len);//прочитать и удалить из input
 	std::string response(data);
 	char* end_data = &data[len];
-	//printf("data: !!!%s!!!\n", data);
+//printf("data: !!!%s!!!\n", data);
 
  	int start = response.find("GET");
 	
@@ -38,7 +38,7 @@ const char* BAD="HTTP/1.0 404 NOT FOUND\r\nContent-length: 0\r\nContent-Type: te
 	
 	if(start == 0){
 		int version = response.find("HTTP/");
-		std::string file_name = response.substr(5, version-6);
+		std::string file_name = response.substr(4, version-5);
 		
 		int param = file_name.find("?");
 		if(param != -1){
@@ -46,7 +46,7 @@ const char* BAD="HTTP/1.0 404 NOT FOUND\r\nContent-length: 0\r\nContent-Type: te
 	
 		}	
 		file_name = directory+file_name;	
-//		printf("file name:!%s!\n", file_name.c_str());
+		//printf("file name:!%s!\n", file_name.c_str());
 			FILE* file = fopen(file_name.c_str(), "r");	
 			if(file != NULL){
 				int file_size=0;
@@ -148,6 +148,7 @@ while ((a=getopt(argc, argv, opts))!=-1){
 	} 
 }
 directory = dir;
+//printf("dir: %s\n", directory.c_str());
 //создание сновного event_base
 	struct event_base *base = event_base_new();
 
