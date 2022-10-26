@@ -127,16 +127,53 @@ static void accept_error_cb(struct evconnlistener *listner,	void*ctx){
 	event_base_loopexit(base, NULL);
 }
 
-int main(int argc, char* argv[]){
-signal(SIGHUP, SIG_IGN);
-daemon(1,1);
-
-int fd = open("logs", O_WRONLY|O_CREAT|O_APPEND, 0664);
-dup2(fd, STDOUT_FILENO);
-dup2(fd, STDERR_FILENO);
-close(STDIN_FILENO);
 
 
+int main(int argc, char* argv[]) {
+        
+        /* Our process ID and Session ID */
+        pid_t pid, sid;
+        
+        /* Fork off the parent process */
+        pid = fork();
+        if (pid < 0) {
+                exit(EXIT_FAILURE);
+        }
+        /* If we got a good PID, then
+           we can exit the parent process. */
+        if (pid > 0) {
+                exit(EXIT_SUCCESS);
+        }
+
+        /* Change the file mode mask */
+        umask(0);
+                
+        /* Open any logs here */        
+        signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+        
+        /* Create a new SID for the child process */
+        sid = setsid();
+        if (sid < 0) {
+                /* Log the failure */
+                exit(EXIT_FAILURE);
+        }
+        
+
+        
+        /* Change the current working directory */
+        if ((chdir("/")) < 0) {
+                /* Log the failure */
+                exit(EXIT_FAILURE);
+        }
+        
+        /* Close out the standard file descriptors */
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
+        
+        /* Daemon-specific initialization goes here */
+        
 const char* opts="h:p:d:";
 int a=0;
 char*ip;
@@ -185,5 +222,66 @@ sockaddr.sin_addr.s_addr =/* htonl(*/addr;//htonl меняет порядок с
 //event_base_loop с флагом 0 - запуск цикла
 	event_base_dispatch(base);
 
-	return 0;
+   exit(EXIT_SUCCESS);
 }
+/*
+int main(int argc, char* argv[]){
+
+signal(SIGHUP, SIG_IGN);
+daemon(1,1);
+
+int fd = open("logs", O_WRONLY|O_CREAT|O_APPEND, 0664);
+dup2(fd, STDOUT_FILENO);
+dup2(fd, STDERR_FILENO);
+close(STDIN_FILENO);
+
+
+const char* opts="h:p:d:";
+int a=0;
+char*ip;
+int port;
+char*dir;
+while ((a=getopt(argc, argv, opts))!=-1){
+	switch(a){
+	case 'h':
+		ip=optarg;
+		break;
+	case 'p':
+		port = atoi(optarg);
+		break;
+	case 'd':
+		dir=optarg;
+		break;
+	} 
+}
+directory = dir;
+//printf("dir: %s\n", directory.c_str());
+//создание сновного event_base
+	struct event_base *base = event_base_new();
+
+int masterSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+struct sockaddr_in sockaddr;
+sockaddr.sin_family = AF_INET;
+sockaddr.sin_port = htons(port);
+
+unsigned addr=0;
+inet_pton(AF_INET, ip, &addr);//адрес в число
+//bind(masterSocket, (struct sockaddr*)(&sockaddr), sizeof(sockaddr) );//не надо, libevent сам делает
+
+
+	struct evconnlistener *listner = evconnlistener_new_bind(base,
+					accept_conn_cb, NULL, 
+					LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE,
+					-1, (struct sockaddr*)&sockaddr, sizeof(sockaddr));
+
+    if (!listner) {
+        perror("Couldn't create listener");
+        return 1;
+    }
+//установка error_callback
+	evconnlistener_set_error_cb(listner, accept_error_cb);
+//event_base_loop с флагом 0 - запуск цикла
+	event_base_dispatch(base);
+
+	return 0;
+}*/
