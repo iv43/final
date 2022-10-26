@@ -16,6 +16,7 @@
 #include<algorithm>
 #include<fstream>
 #include<arpa/inet.h>
+#include<signal.h>
 std::string directory = "."; 
 static void read_cb(struct bufferevent*bev, void *ctx){
 //printf("read_cb\n");
@@ -127,6 +128,7 @@ static void accept_error_cb(struct evconnlistener *listner,	void*ctx){
 }
 
 int main(int argc, char* argv[]){
+signal(SIGHUP, SIG_IGN);
 daemon(1,1);
 
 int fd = open("logs", O_WRONLY|O_CREAT|O_APPEND, 0664);
