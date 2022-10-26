@@ -16,7 +16,7 @@
 #include<algorithm>
 #include<fstream>
 #include<arpa/inet.h>
-std::string directory = "./"; 
+std::string directory = "."; 
 static void read_cb(struct bufferevent*bev, void *ctx){
 //printf("read_cb\n");
 	struct evbuffer *input = bufferevent_get_input(bev);
@@ -34,7 +34,7 @@ static void read_cb(struct bufferevent*bev, void *ctx){
 
  	int start = response.find("GET");
 	
-const char* BAD="HTTP/1.0 404 NOT FOUND\r\nContent-length: 0\r\nContent-Type: text/html\r\n\r\n";
+const char* BAD="HTTP/1.0 404 NOT FOUND\r\nContent-length: 0\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n";
 	
 	if(start == 0){
 		int version = response.find("HTTP/");
@@ -53,18 +53,24 @@ const char* BAD="HTTP/1.0 404 NOT FOUND\r\nContent-length: 0\r\nContent-Type: te
 				struct stat fileStat;
 				fstat(fileno(file), &fileStat);
 				file_size=fileStat.st_size;
-char file_size_char[21]{};
-sprintf(file_size_char, "%d",file_size);
-const char* OK="HTTP/1.0 200 OK\r\nContent-length: ";
-				evbuffer_add(output, OK,strlen(OK));
-				evbuffer_add(output, file_size_char, strlen(file_size_char));
-const char* OKend="\r\nContent-Type: text/html\r\n\r\n";
-				evbuffer_add(output, OKend, strlen(OKend));
-				evbuffer_add_file(output, fileno(file), 0, -1);
-const char* end="\r\n\r\n";
+				char* string=new char[file_size+1]{};
+//char file_size_char[21]{};
+//sprintf(file_size_char, "%d",file_size);
+static const char* OK = "HTTP/1.0 200 OK\r\nContent-length: %d\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n%s";
+int pos=0;
+fread(string,1, file_size, file);
+//printf("string: %s", string);
+evbuffer_add_printf(output, OK,file_size, string);
+//const char* OK="HTTP/1.0 200 OK\r\nContent-length: ";
+//				evbuffer_add(output, OK,strlen(OK));
+//				evbuffer_add(output, file_size_char, strlen(file_size_char));
+//const char* OKend="\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n";
+//				evbuffer_add(output, OKend, strlen(OKend));
+				//printf("statuf file: %d\n",evbuffer_add_file(output, fileno(file), 0, -1));
+/*const char* end="\r\n\r\n";
 				evbuffer_add(output, end, strlen(end));
-sleep(1);
-				fclose(file);
+*/
+//				fclose(file); не надо, evbuffer_add_file сама закроет файл
 			}else{
 				evbuffer_add(output, BAD,strlen(BAD));
 			}
@@ -121,7 +127,7 @@ static void accept_error_cb(struct evconnlistener *listner,	void*ctx){
 }
 
 int main(int argc, char* argv[]){
-daemon(0,0);
+daemon(1,1);
 
 int fd = open("logs", O_WRONLY|O_CREAT|O_APPEND, 0664);
 dup2(fd, STDOUT_FILENO);
